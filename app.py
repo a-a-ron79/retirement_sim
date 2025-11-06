@@ -1,6 +1,7 @@
 import streamlit as st
 import numpy as np
 import matplotlib.pyplot as plt
+from matplotlib.ticker import FuncFormatter
 
 st.title("Monte Carlo Retirement Simulator — Geographic Arbitrage Edition with Asset Allocation")
 
@@ -133,13 +134,22 @@ p10 = np.percentile(final_balances, 10)
 p90 = np.percentile(final_balances, 90)
 success_rate = np.mean(np.array(final_balances) > threshold) * 100
 
-# Plot
+# Plot with abbreviated Y-axis labels
+def currency_formatter(x, pos):
+    if x >= 1_000_000:
+        return f"${x/1_000_000:.1f}M"
+    elif x >= 1_000:
+        return f"${x/1_000:.0f}K"
+    else:
+        return f"${x:,.0f}"
+
 plt.figure(figsize=(10, 6))
 plt.plot(results.T, color='gray', alpha=0.05)
 plt.title("Monte Carlo Retirement Projection (Value at Death)")
 plt.xlabel("Years from Current Age")
-plt.ylabel("Portfolio Value ($)")
+plt.ylabel("Portfolio Value ($K / $M)")
 plt.grid(True)
+plt.gca().yaxis.set_major_formatter(FuncFormatter(currency_formatter))
 st.pyplot(plt)
 
 # Display summary stats
