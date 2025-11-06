@@ -2,55 +2,126 @@ import streamlit as st
 import numpy as np
 import matplotlib.pyplot as plt
 
-st.title("Monte Carlo Retirement Simulator")
+st.title("Monte Carlo Retirement Simulator — Geographic Arbitrage Edition with Asset Allocation")
+
+MAX_SIMS = 20000
 
 # User Inputs
-init = st.number_input("Initial portfolio ($)", value=1_000_000)
-spend_base = st.number_input("Annual spending ($)", value=60_000)
-mean = st.number_input("Mean annual return (%)", value=5.0)
-std = st.number_input("Volatility (%)", value=12.0)
-years = st.slider("Years in retirement", 10, 50, 30)
-sims = st.slider("Number of simulations", 100, 5000, 1000, step=100)
-threshold = st.number_input("Success threshold ($)", value=0)
+init = float(st.text_input("Initial portfolio ($)", value="1000000"))
+spend_base = float(st.text_input("Annual spending in target country ($)", value="60000"))
+current_age = int(st.text_input("Current age", value="40"))
+retire_age = int(st.text_input("Retirement age", value="55"))
+death_age = int(st.text_input("Age at death", value="90"))
 
-# Distribution selection
-dist_type = st.selectbox("Return distribution", ["Normal", "Lognormal"])
+# Inflation parameters
+home_inflation_rate = float(st.text_input("Home country annual inflation rate (%)", value="2.0"))
+target_inflation_rate = float(st.text_input("Target country annual inflation rate (%)", value="4.0"))
 
-# Inflation toggle
-use_inflation = st.checkbox("Adjust spending for inflation?")
-inflation_rate = 0.0
-if use_inflation:
-    inflation_rate = st.number_input("Annual inflation rate (%)", value=2.0)
+# Social Security / Pension parameters
+start_ssi_age = int(st.text_input("Age to start receiving retirement income (e.g., SSI)", value="67"))
+ssi_amount_today = float(st.text_input("Annual retirement income in today's dollars ($)", value="26000"))
+include_ssi_taxable = st.checkbox("Include SSI in taxable income?", value=False)
+
+# Asset allocation inputs
+st.subheader("Portfolio Allocation")
+weights_equity = float(st.text_input("% in Equities", value="60")) / 100
+weights_bonds = float(st.text_input("% in Bonds", value="30")) / 100
+weights_cash = float(st.text_input("% in Cash", value="10")) / 100
+
+if abs(weights_equity + weights_bonds + weights_cash - 1.0) > 0.001:
+    st.warning("⚠️ Allocation must sum to 100%. Values will be normalized.")
+    total = weights_equity + weights_bonds + weights_cash
+    weights_equity /= total
+    weights_bonds /= total
+    weights_cash /= total
+
+# Expected returns and volatilities per asset class
+mean_equity = float(st.text_input("Equity mean annual return (%)", value="7.0")) / 100
+std_equity = float(st.text_input("Equity volatility (%)", value="18.0")) / 100
+mean_bonds = float(st.text_input("Bond mean annual return (%)", value="3.0")) / 100
+std_bonds = float(st.text_input("Bond volatility (%)", value="6.0")) / 100
+mean_cash = float(st.text_input("Cash mean annual return (%)", value="1.0")) / 100
+std_cash = float(st.text_input("Cash volatility (%)", value="1.0")) / 100
+
+# Correlation matrix (approximate typical assumptions)
+corr = np.array([[1.0, 0.2, 0.0], [0.2, 1.0, 0.1], [0.0, 0.1, 1.0]])
+
+# Simulation control
+sims_input = st.text_input("Number of simulations (max 20,000)", value="1000", help="For performance, simulations are capped at 20,000.")
+try:
+    sims_val = int(sims_input)
+except ValueError:
+    sims_val = 1000
+    st.warning("Invalid simulations input. Using default of 1,000.")
+
+if sims_val <= 0:
+    st.warning("Number of simulations must be positive. Using 1.")
+    sims_val = 1
+elif sims_val > MAX_SIMS:
+    st.warning(f"Simulations capped at {MAX_SIMS} for performance.")
+    sims_val = MAX_SIMS
+sims = sims_val
+st.caption(f"Running {sims:,} simulations (cap = {MAX_SIMS:,}).")
+
+threshold = float(st.text_input("Success threshold ($)", value="0"))
+
+# Work income parameters
+earn_income = st.checkbox("Earn income before retirement?")
+gross_income = 0.0
+if earn_income:
+    gross_income = float(st.text_input("Gross annual pre-tax income ($)", value="50000"))
+
+# Derived years
+total_years = death_age - current_age
+work_years = retire_age - current_age
+
+# Inflation decimals
+home_inflation_decimal = home_inflation_rate / 100
+target_inflation_decimal = target_inflation_rate / 100
+
+# Covariance matrix from volatilities and correlations
+stds = np.array([std_equity, std_bonds, std_cash])
+cov_matrix = np.outer(stds, stds) * corr
+
+# Cholesky decomposition for correlated random returns
+chol = np.linalg.cholesky(cov_matrix)
 
 # Monte Carlo simulation
 results = []
 final_balances = []
 
-# Convert to decimals
-mean_decimal = mean / 100
-std_decimal = std / 100
-inflation_decimal = inflation_rate / 100
-
-# Adjust lognormal parameters if selected
-if dist_type == "Lognormal":
-    mu = np.log(1 + mean_decimal) - 0.5 * (std_decimal**2)
-    sigma = np.sqrt(np.log(1 + (std_decimal**2)))
-
 for _ in range(sims):
     balance = init
     path = []
-    for year in range(years):
-        # Spending with inflation
-        spend = spend_base * ((1 + inflation_decimal) ** year) if use_inflation else spend_base
+    for year in range(total_years):
+        age = current_age + year
 
-        # Draw return
-        if dist_type == "Normal":
-            growth = np.random.normal(mean_decimal, std_decimal)
-        else:
-            growth = np.random.lognormal(mu, sigma) - 1  # convert back to % return
+        # Determine spending and income by life stage
+        spend = spend_base * ((1 + target_inflation_decimal) ** year)
+        income = 0
 
-        balance = (balance - spend) * (1 + growth)
+        if earn_income and age < retire_age:
+            income += gross_income
+
+        # Add SSI/retirement income after start_ssi_age, adjusted for home inflation
+        if age >= start_ssi_age:
+            ssi_income = ssi_amount_today * ((1 + home_inflation_decimal) ** (age - current_age))
+            income += ssi_income
+
+        # Simulate correlated returns
+        rand = np.random.normal(0, 1, 3)
+        correlated = chol @ rand
+        eq_ret = mean_equity + correlated[0]
+        bd_ret = mean_bonds + correlated[1]
+        cs_ret = mean_cash + correlated[2]
+
+        # Weighted portfolio return
+        portfolio_growth = weights_equity * eq_ret + weights_bonds * bd_ret + weights_cash * cs_ret
+
+        # Update portfolio
+        balance = (balance + income - spend) * (1 + portfolio_growth)
         path.append(balance)
+
     results.append(path)
     final_balances.append(path[-1])
 
@@ -65,16 +136,17 @@ success_rate = np.mean(np.array(final_balances) > threshold) * 100
 # Plot
 plt.figure(figsize=(10, 6))
 plt.plot(results.T, color='gray', alpha=0.05)
-plt.title("Monte Carlo Retirement Projection")
-plt.xlabel("Years")
+plt.title("Monte Carlo Retirement Projection (Value at Death)")
+plt.xlabel("Years from Current Age")
 plt.ylabel("Portfolio Value ($)")
 plt.grid(True)
 st.pyplot(plt)
 
 # Display summary stats
 st.subheader("Simulation Results Summary")
-st.write(f"**Median Final Portfolio:** ${median_final:,.0f}")
+st.write(f"**Median Portfolio at Death:** ${median_final:,.0f}")
 st.write(f"**10th Percentile:** ${p10:,.0f}")
 st.write(f"**90th Percentile:** ${p90:,.0f}")
 st.write(f"**Success Rate (Final > ${threshold:,.0f}):** {success_rate:.1f}%")
+
 
