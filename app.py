@@ -2,6 +2,7 @@ import streamlit as st
 import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.ticker import FuncFormatter
+import matplotlib.cm as cm
 
 st.title("Monte Carlo Retirement Simulator — Geographic Arbitrage Edition with Asset Allocation")
 
@@ -134,7 +135,7 @@ p10 = np.percentile(final_balances, 10)
 p90 = np.percentile(final_balances, 90)
 success_rate = np.mean(np.array(final_balances) > threshold) * 100
 
-# Plot with abbreviated Y-axis labels
+# Plot with varied line colors and abbreviated Y-axis labels
 def currency_formatter(x, pos):
     if x >= 1_000_000:
         return f"${x/1_000_000:.1f}M"
@@ -143,8 +144,12 @@ def currency_formatter(x, pos):
     else:
         return f"${x:,.0f}"
 
+colors = cm.viridis(np.linspace(0, 1, sims))
+
 plt.figure(figsize=(10, 6))
-plt.plot(results.T, color='gray', alpha=0.05)
+for i, path in enumerate(results):
+    plt.plot(path, color=colors[i], alpha=0.3)
+
 plt.title("Monte Carlo Retirement Projection (Value at Death)")
 plt.xlabel("Years from Current Age")
 plt.ylabel("Portfolio Value ($K / $M)")
