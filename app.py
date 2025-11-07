@@ -5,7 +5,7 @@ st.markdown('''
 - **Income:** Before retirement, any earned income entered is added to the portfolio annually. Once retired, this income stops unless Social Security or another retirement income is selected.
 - **Expenses:** Annual spending is entered in today's dollars and grows each year according to the **target country inflation rate**.
 - **Social Security (SSI):** Begins at the age you specify and is adjusted annually using the **home country inflation rate**. Any unspent SSI income is reinvested into the portfolio.
-- **Investments:** Portfolio returns are simulated across equities, bonds, and cash using independent but correlated return distributions. The model can either automatically rebalance each year or allow asset drift based on your selection.
+- **Investments:** Portfolio returns are simulated across equities, bonds, and cash using independent but correlated return distributions. The model automatically rebalances each year based on your selected allocation.
 - **Projection:** Each simulation represents one potential future path of your portfolio value from your current age until your projected age at death.
 - **Results:** The chart and summary statistics display the range of outcomes (10th, 50th, and 90th percentiles) and the percentage of simulations where your portfolio remains above your target threshold at death.
 ''')
@@ -95,9 +95,6 @@ gross_income = 0.0
 if earn_income:
     gross_income = float(st.text_input("Gross annual pre-tax income ($)", value="50000"))
 
-# Annual rebalancing toggle
-rebalancing = st.checkbox("Rebalance portfolio annually?", value=True)
-
 # Derived years
 total_years = death_age - current_age
 
@@ -116,13 +113,9 @@ chol = np.linalg.cholesky(cov_matrix)
 results = []
 final_balances = []
 
-# Starting weights
-portfolio_values = np.array([weights_equity, weights_bonds, weights_cash]) * init
-
 for _ in range(sims):
     balance = init
     path = []
-    current_alloc = np.array([weights_equity, weights_bonds, weights_cash])
     for year in range(total_years):
         age = current_age + year
 
@@ -145,19 +138,11 @@ for _ in range(sims):
         bd_ret = mean_bonds + correlated[1]
         cs_ret = mean_cash + correlated[2]
 
-        # Apply returns to each asset
-        portfolio_values = portfolio_values * (1 + np.array([eq_ret, bd_ret, cs_ret]))
+        # Weighted portfolio return
+        portfolio_growth = weights_equity * eq_ret + weights_bonds * bd_ret + weights_cash * cs_ret
 
-        # Rebalance if enabled
-        if rebalancing:
-            total_portfolio = np.sum(portfolio_values)
-            portfolio_values = total_portfolio * np.array([weights_equity, weights_bonds, weights_cash])
-
-        # Update total balance after income and spending
-        total_portfolio = np.sum(portfolio_values) + income - spend
-        portfolio_values = portfolio_values / np.sum(portfolio_values) * total_portfolio
-
-        balance = np.sum(portfolio_values)
+        # Update portfolio
+        balance = (balance + income - spend) * (1 + portfolio_growth)
         path.append(balance)
 
     results.append(path)
@@ -199,6 +184,7 @@ st.write(f"**Median Portfolio at Death:** ${median_final:,.0f}")
 st.write(f"**10th Percentile:** ${p10:,.0f}")
 st.write(f"**90th Percentile:** ${p90:,.0f}")
 st.write(f"**Success Rate (Final > ${threshold:,.0f}):** {success_rate:.1f}%")
+
 
 
 
