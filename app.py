@@ -1,4 +1,16 @@
 import streamlit as st
+
+st.markdown('''
+### How This Model Works
+- **Income:** Before retirement, any earned income entered is added to the portfolio annually. Once retired, this income stops unless Social Security or another retirement income is selected.
+- **Expenses:** Annual spending is entered in today's dollars and grows each year according to the **target country inflation rate**.
+- **Social Security (SSI):** Begins at the age you specify and is adjusted annually using the **home country inflation rate**. Any unspent SSI income is reinvested into the portfolio.
+- **Investments:** Portfolio returns are simulated across equities, bonds, and cash using independent but correlated return distributions. The model automatically rebalances each year based on your selected allocation.
+- **Projection:** Each simulation represents one potential future path of your portfolio value from your current age until your projected age at death.
+- **Results:** The chart and summary statistics display the range of outcomes (10th, 50th, and 90th percentiles) and the percentage of simulations where your portfolio remains above your target threshold at death.
+''')
+
+import streamlit as st
 import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.ticker import FuncFormatter
@@ -11,9 +23,19 @@ MAX_SIMS = 20000
 # User Inputs
 init = float(st.text_input("Initial portfolio ($)", value="1000000"))
 spend_base = float(st.text_input("Annual spending in target country ($)", value="60000"))
-current_age = int(st.text_input("Current age", value="40"))
-retire_age = int(st.text_input("Retirement age", value="55"))
+current_age = int(st.text_input("Current age", value="68"))
+retire_age = int(st.text_input("Retirement age", value="65"))
 death_age = int(st.text_input("Age at death", value="90"))
+
+# Validation for age logic
+if retire_age > death_age:
+    st.warning("⚠️ Retirement age cannot exceed age at death. Adjusting retirement age to match death age.")
+    retire_age = death_age
+
+# If already retired (current_age >= retire_age), disable work income logic
+already_retired = current_age >= retire_age
+if already_retired:
+    st.info("This scenario models someone already in retirement. Earned income will not be applied.")
 
 # Inflation parameters
 home_inflation_rate = float(st.text_input("Home country annual inflation rate (%)", value="2.0"))
@@ -68,14 +90,13 @@ st.caption(f"Running {sims:,} simulations (cap = {MAX_SIMS:,}).")
 threshold = float(st.text_input("Success threshold ($)", value="0"))
 
 # Work income parameters
-earn_income = st.checkbox("Earn income before retirement?")
+earn_income = st.checkbox("Earn income before retirement?") and not already_retired
 gross_income = 0.0
 if earn_income:
     gross_income = float(st.text_input("Gross annual pre-tax income ($)", value="50000"))
 
 # Derived years
 total_years = death_age - current_age
-work_years = retire_age - current_age
 
 # Inflation decimals
 home_inflation_decimal = home_inflation_rate / 100
@@ -163,5 +184,6 @@ st.write(f"**Median Portfolio at Death:** ${median_final:,.0f}")
 st.write(f"**10th Percentile:** ${p10:,.0f}")
 st.write(f"**90th Percentile:** ${p90:,.0f}")
 st.write(f"**Success Rate (Final > ${threshold:,.0f}):** {success_rate:.1f}%")
+
 
 
