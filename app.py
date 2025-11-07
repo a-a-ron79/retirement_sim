@@ -2,12 +2,12 @@ import streamlit as st
 
 st.markdown('''
 ### How This Model Works
-- **Income:** Before retirement, any earned income entered is added to the portfolio annually. Once retired, this income stops unless Social Security or another retirement income is selected.
+- **Income:** Before retirement, earned income reduces how much must be withdrawn from investments. If income exceeds expenses, the surplus stays invested. Once retired, this income stops unless Social Security or another retirement income is selected.
 - **Expenses:** Annual spending is entered in today's dollars and grows each year according to the **target country inflation rate**.
-- **Social Security (SSI):** Begins at the age you specify and is adjusted annually using the **home country inflation rate**. Any unspent SSI income is reinvested into the portfolio.
+- **Social Security (SSI):** Begins at the age you specify and is adjusted annually using the **home country inflation rate**. SSI is applied toward expenses first; any remaining surplus is reinvested into the portfolio.
 - **Investments:** Portfolio returns are simulated across equities, bonds, and cash using independent but correlated return distributions. The model automatically rebalances each year based on your selected allocation.
 - **Projection:** Each simulation represents one potential future path of your portfolio value from your current age until your projected age at death.
-- **Results:** The chart and summary statistics display the range of outcomes (10th, 50th, and 90th percentiles) and the percentage of simulations where your portfolio remains above your target threshold at death.
+- **Results:**** The chart and summary statistics display the range of outcomes (10th, 50th, and 90th percentiles) and the percentage of simulations where your portfolio remains above your target threshold at death.
 ''')
 
 import streamlit as st
@@ -23,9 +23,9 @@ MAX_SIMS = 20000
 # User Inputs
 init = float(st.text_input("Initial portfolio ($)", value="1000000"))
 spend_base = float(st.text_input("Annual spending in target country ($)", value="60000"))
-current_age = int(st.text_input("Current age", value="68"))
+current_age = int(st.text_input("Current age", value="40"))
 retire_age = int(st.text_input("Retirement age", value="65"))
-death_age = int(st.text_input("Age at death", value="90"))
+death_age = int(st.text_input("Age at death", value="100"))
 
 # Validation for age logic
 if retire_age > death_age:
@@ -60,7 +60,7 @@ if abs(weights_equity + weights_bonds + weights_cash - 1.0) > 0.001:
     weights_cash /= total
 
 # Expected returns and volatilities per asset class
-mean_equity = float(st.text_input("Equity mean annual return (%)", value="7.0")) / 100
+mean_equity = float(st.text_input("Equity mean annual return (%)", value="8.0")) / 100
 std_equity = float(st.text_input("Equity volatility (%)", value="18.0")) / 100
 mean_bonds = float(st.text_input("Bond mean annual return (%)", value="3.0")) / 100
 std_bonds = float(st.text_input("Bond volatility (%)", value="6.0")) / 100
@@ -184,6 +184,10 @@ st.write(f"**Median Portfolio at Death:** ${median_final:,.0f}")
 st.write(f"**10th Percentile:** ${p10:,.0f}")
 st.write(f"**90th Percentile:** ${p90:,.0f}")
 st.write(f"**Success Rate (Final > ${threshold:,.0f}):** {success_rate:.1f}%")
+
+
+
+
 
 
 
