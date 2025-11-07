@@ -5,9 +5,10 @@ st.markdown('''
 - **Income:** Before retirement, earned income reduces how much must be withdrawn from investments. If income exceeds expenses, the surplus stays invested. Once retired, this income stops unless Social Security or another retirement income is selected.
 - **Expenses:** Annual spending is entered in today's dollars and grows each year according to the **target country inflation rate**.
 - **Social Security (SSI):** Begins at the age you specify and is adjusted annually using the **home country inflation rate**. SSI is applied toward expenses first; any remaining surplus is reinvested into the portfolio.
+- **Lump Sum Events:** You can specify a one-time lump sum received at a specific age (e.g., inheritance, property sale, or pension payout). This amount is added to the investment portfolio in that year.
 - **Investments:** Portfolio returns are simulated across equities, bonds, and cash using independent but correlated return distributions. The model automatically rebalances each year based on your selected allocation.
 - **Projection:** Each simulation represents one potential future path of your portfolio value from your current age until your projected age at death.
-- **Results:**** The chart and summary statistics display the range of outcomes (10th, 50th, and 90th percentiles) and the percentage of simulations where your portfolio remains above your target threshold at death.
+- **Results:** The chart and summary statistics display the range of outcomes (10th, 50th, and 90th percentiles) and the percentage of simulations where your portfolio remains above your target threshold at death.
 ''')
 
 import streamlit as st
@@ -23,9 +24,9 @@ MAX_SIMS = 20000
 # User Inputs
 init = float(st.text_input("Initial portfolio ($)", value="1000000"))
 spend_base = float(st.text_input("Annual spending in target country ($)", value="60000"))
-current_age = int(st.text_input("Current age", value="40"))
+current_age = int(st.text_input("Current age", value="68"))
 retire_age = int(st.text_input("Retirement age", value="65"))
-death_age = int(st.text_input("Age at death", value="100"))
+death_age = int(st.text_input("Age at death", value="90"))
 
 # Validation for age logic
 if retire_age > death_age:
@@ -46,6 +47,15 @@ start_ssi_age = int(st.text_input("Age to start receiving retirement income (e.g
 ssi_amount_today = float(st.text_input("Annual retirement income in today's dollars ($)", value="26000"))
 include_ssi_taxable = st.checkbox("Include SSI in taxable income?", value=False)
 
+# Lump sum input
+st.subheader("Lump Sum Event")
+receive_lump_sum = st.checkbox("Receive a lump sum in the future?")
+lump_sum_amount = 0.0
+lump_sum_age = None
+if receive_lump_sum:
+    lump_sum_amount = float(st.text_input("Lump sum amount ($)", value="100000"))
+    lump_sum_age = int(st.text_input("Age when lump sum is received", value="70"))
+
 # Asset allocation inputs
 st.subheader("Portfolio Allocation")
 weights_equity = float(st.text_input("% in Equities", value="60")) / 100
@@ -60,7 +70,7 @@ if abs(weights_equity + weights_bonds + weights_cash - 1.0) > 0.001:
     weights_cash /= total
 
 # Expected returns and volatilities per asset class
-mean_equity = float(st.text_input("Equity mean annual return (%)", value="8.0")) / 100
+mean_equity = float(st.text_input("Equity mean annual return (%)", value="7.0")) / 100
 std_equity = float(st.text_input("Equity volatility (%)", value="18.0")) / 100
 mean_bonds = float(st.text_input("Bond mean annual return (%)", value="3.0")) / 100
 std_bonds = float(st.text_input("Bond volatility (%)", value="6.0")) / 100
@@ -130,6 +140,10 @@ for _ in range(sims):
         if age >= start_ssi_age:
             ssi_income = ssi_amount_today * ((1 + home_inflation_decimal) ** (age - current_age))
             income += ssi_income
+
+        # Add lump sum event if applicable
+        if receive_lump_sum and age == lump_sum_age:
+            balance += lump_sum_amount
 
         # Simulate correlated returns
         rand = np.random.normal(0, 1, 3)
