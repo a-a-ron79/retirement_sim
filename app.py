@@ -1,4 +1,6 @@
 import streamlit as st
+st.title("Monte Carlo Retirement Simulator — Geographic Arbitrage Edition with Asset Allocation")
+
 st.markdown('''
 ### How This Model Works
 - **Income:** Before retirement, earned income reduces how much must be withdrawn from investments. If income exceeds expenses, the surplus stays invested. Once retired, this income stops unless Social Security or another retirement income is selected.
@@ -25,7 +27,6 @@ import matplotlib.pyplot as plt
 from matplotlib.ticker import FuncFormatter
 import matplotlib.cm as cm
 
-st.title("Monte Carlo Retirement Simulator — Geographic Arbitrage Edition with Asset Allocation")
 
 MAX_SIMS = 20000
 
