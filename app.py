@@ -5,10 +5,18 @@ st.markdown('''
 - **Income:** Before retirement, earned income reduces how much must be withdrawn from investments. If income exceeds expenses, the surplus stays invested. Once retired, this income stops unless Social Security or another retirement income is selected.
 - **Expenses:** Annual spending is entered in today's dollars and grows each year according to the **target country inflation rate**.
 - **Social Security (SSI):** Begins at the age you specify and is adjusted annually using the **home country inflation rate**. SSI is applied toward expenses first; any remaining surplus is reinvested into the portfolio.
-- **Lump Sum Events:** You can specify a one-time lump sum received at a specific age (e.g., inheritance, property sale, or pension payout). This amount is added to the investment portfolio in that year.
-- **Investments:** Portfolio returns are simulated across equities, bonds, and cash using independent but correlated return distributions. The model automatically rebalances each year based on your selected allocation.
-- **Projection:** Each simulation represents one potential future path of your portfolio value from your current age until your projected age at death.
-- **Results:** The chart and summary statistics display the range of outcomes (10th, 50th, and 90th percentiles) and the percentage of simulations where your portfolio remains above your target threshold at death.
+- **Lump Sum Events:** You can enter a one-time lump sum (for example, inheritance, property sale, or pension payout) received at a specific age. The amount is added to the portfolio balance in that year.
+- **Investments:** Portfolio returns are simulated across equities, bonds, and cash:
+  - **Equities** use *lognormal returns* to model realistic compounding and prevent impossible negative returns beyond −100%.
+  - **Bonds** use *normal returns* that allow both gains and moderate losses.
+  - **Cash** uses *normal returns clipped at 0%*, so cash never loses nominal value but still fluctuates slightly.
+  - All three asset classes are modeled with realistic correlations using a Cholesky decomposition.
+- **Inflation:** Two separate inflation rates are used — one for your home country (to adjust SSI or similar income) and one for your target country (to adjust living expenses).
+- **Projection:** Each simulation represents a potential future path of your portfolio value from your current age through your expected age at death, considering income, spending, lump sums, and returns.
+- **Results:** The simulator outputs key metrics:
+  - Median, 10th percentile, and 90th percentile ending portfolio values.
+  - Minimum and maximum ending values observed across simulations.
+  - Success rate — the percentage of runs where your final portfolio exceeds your target threshold.**
 ''')
 
 import streamlit as st
@@ -77,8 +85,19 @@ std_bonds = float(st.text_input("Bond volatility (%)", value="6.0")) / 100
 mean_cash = float(st.text_input("Cash mean annual return (%)", value="1.0")) / 100
 std_cash = float(st.text_input("Cash volatility (%)", value="1.0")) / 100
 
+# Convert equity arithmetic mean/std to lognormal parameters
+mu_eq_ln = np.log(1 + mean_equity) - 0.5 * (std_equity ** 2)
+sigma_eq_ln = np.sqrt(np.log(1 + (std_equity ** 2)))
+
 # Correlation matrix (approximate typical assumptions)
 corr = np.array([[1.0, 0.2, 0.0], [0.2, 1.0, 0.1], [0.0, 0.1, 1.0]])
+
+# Covariance matrix from volatilities and correlations
+stds = np.array([1.0, 1.0, 1.0])  # standardized for Cholesky
+cov_matrix = np.outer(stds, stds) * corr
+
+# Cholesky decomposition for correlated normal shocks
+chol = np.linalg.cholesky(cov_matrix)
 
 # Simulation control
 sims_input = st.text_input("Number of simulations (max 20,000)", value="1000", help="For performance, simulations are capped at 20,000.")
@@ -112,13 +131,6 @@ total_years = death_age - current_age
 home_inflation_decimal = home_inflation_rate / 100
 target_inflation_decimal = target_inflation_rate / 100
 
-# Covariance matrix from volatilities and correlations
-stds = np.array([std_equity, std_bonds, std_cash])
-cov_matrix = np.outer(stds, stds) * corr
-
-# Cholesky decomposition for correlated random returns
-chol = np.linalg.cholesky(cov_matrix)
-
 # Monte Carlo simulation
 results = []
 final_balances = []
@@ -145,12 +157,14 @@ for _ in range(sims):
         if receive_lump_sum and age == lump_sum_age:
             balance += lump_sum_amount
 
-        # Simulate correlated returns
+        # Simulate correlated standard normal shocks
         rand = np.random.normal(0, 1, 3)
         correlated = chol @ rand
-        eq_ret = mean_equity + correlated[0]
-        bd_ret = mean_bonds + correlated[1]
-        cs_ret = mean_cash + correlated[2]
+
+        # Transform to returns: equity lognormal, bonds normal, cash normal but nonnegative
+        eq_ret = np.exp(mu_eq_ln + sigma_eq_ln * correlated[0]) - 1
+        bd_ret = mean_bonds + correlated[1] * std_bonds
+        cs_ret = np.maximum(0, mean_cash + correlated[2] * std_cash)
 
         # Weighted portfolio return
         portfolio_growth = weights_equity * eq_ret + weights_bonds * bd_ret + weights_cash * cs_ret
@@ -168,6 +182,8 @@ results = np.array(results)
 median_final = np.median(final_balances)
 p10 = np.percentile(final_balances, 10)
 p90 = np.percentile(final_balances, 90)
+min_final = np.min(final_balances)
+max_final = np.max(final_balances)
 success_rate = np.mean(np.array(final_balances) > threshold) * 100
 
 # Plot with varied line colors and abbreviated Y-axis labels
@@ -197,6 +213,8 @@ st.subheader("Simulation Results Summary")
 st.write(f"**Median Portfolio at Death:** ${median_final:,.0f}")
 st.write(f"**10th Percentile:** ${p10:,.0f}")
 st.write(f"**90th Percentile:** ${p90:,.0f}")
+st.write(f"**Minimum Portfolio at Death:** ${min_final:,.0f}")
+st.write(f"**Maximum Portfolio at Death:** ${max_final:,.0f}")
 st.write(f"**Success Rate (Final > ${threshold:,.0f}):** {success_rate:.1f}%")
 
 
