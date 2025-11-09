@@ -89,11 +89,11 @@ if abs(weights_equity + weights_bonds + weights_cash - 1.0) > 0.001:
     weights_cash /= total
 
 # Expected returns and volatilities per asset class
-mean_equity = float(st.text_input("Equity mean annual return (%)", value="7.0")) / 100
-std_equity = float(st.text_input("Equity volatility (%)", value="18.0")) / 100
+mean_equity = float(st.text_input("Equity mean annual return (%)", value="10.0")) / 100
+std_equity = float(st.text_input("Equity volatility (%)", value="15.0")) / 100
 mean_bonds = float(st.text_input("Bond mean annual return (%)", value="3.0")) / 100
 std_bonds = float(st.text_input("Bond volatility (%)", value="6.0")) / 100
-mean_cash = float(st.text_input("Cash mean annual return (%)", value="1.0")) / 100
+mean_cash = float(st.text_input("Cash mean annual return (%)", value="2.0")) / 100
 std_cash = float(st.text_input("Cash volatility (%)", value="1.0")) / 100
 
 # Corrected conversion from arithmetic to lognormal parameters
