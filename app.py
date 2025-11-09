@@ -10,7 +10,7 @@ st.markdown('''
 - **Taxes:** Two effective tax rates are applied — one while working and one during retirement. Taxes reduce annual income accordingly. Additionally, if investment withdrawals are required during retirement, a 50% portion of your retirement tax rate is applied to inflate withdrawals, approximating partial taxation.
 - **Mid-Year Convention:** Each year’s investment growth is split evenly — half applied before and half after income and spending — to create more realistic annual compounding behavior.
 - **Inflation:** Two separate inflation rates are used — one for your home country (affecting home income and spending) and one for your target country (affecting retirement income and local expenses).
-- **Investments:** Returns are simulated for equities (lognormal), bonds (normal), and cash (normal but floored at 0%). Correlations are included using a Cholesky decomposition.
+- **Investments:** You can adjust expected mean returns and volatility for equities, bonds, and cash. Correlations are included using a Cholesky decomposition.
 ''')
 
 import numpy as np
@@ -45,6 +45,16 @@ target_inflation_rate = float(st.text_input("Target country annual inflation rat
 
 gross_income = float(st.text_input("Annual earned income before retirement in target country ($)", value="0"))
 
+# Investment Return Assumptions
+mean_equity = float(st.text_input("Mean annual return for equities (%)", value="9.0")) / 100
+std_equity = float(st.text_input("Volatility for equities (%)", value="15.0")) / 100
+mean_bonds = float(st.text_input("Mean annual return for bonds (%)", value="3.0")) / 100
+std_bonds = float(st.text_input("Volatility for bonds (%)", value="6.0")) / 100
+mean_cash = float(st.text_input("Mean annual return for cash (%)", value="2.0")) / 100
+std_cash = float(st.text_input("Volatility for cash (%)", value="0.5")) / 100
+
+weights_equity, weights_bonds, weights_cash = 0.6, 0.3, 0.1
+
 # Tax rates
 work_tax_rate = float(st.text_input("Effective tax rate while working (%)", value="20.0")) / 100
 retire_tax_rate = float(st.text_input("Effective tax rate during retirement (%)", value="10.0")) / 100
@@ -59,12 +69,6 @@ receive_lump_age = int(st.text_input("Age when lump sum is received", value="70"
 lump_amount_today = float(st.text_input("Lump sum amount ($)", value="100000"))
 
 # --- Monte Carlo setup ---
-mean_equity, std_equity = 0.09, 0.15
-mean_bonds, std_bonds = 0.03, 0.06
-mean_cash, std_cash = 0.02, 0.005
-
-weights_equity, weights_bonds, weights_cash = 0.6, 0.3, 0.1
-
 mu_eq_ln = np.log(1 + mean_equity) - 0.5 * (std_equity ** 2)
 sigma_eq_ln = np.sqrt(np.log(1 + (std_equity ** 2)))
 
