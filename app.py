@@ -32,14 +32,14 @@ MAX_SIMS = 20000
 
 # User Inputs
 init = float(st.text_input("Initial portfolio ($)", value="1000000"))
-spend_base = float(st.text_input("Annual spending in target country ($)", value="60000"))
-current_age = int(st.text_input("Current age", value="68"))
-retire_age = int(st.text_input("Retirement age", value="65"))
-death_age = int(st.text_input("Age at death", value="90"))
+spend_base = float(st.text_input("Annual spending in target country ($)", value="100000"))
+current_age = int(st.text_input("Current age", value="45"))
+retire_age = int(st.text_input("Retirement age", value="55"))
+death_age = int(st.text_input("Age at death", value="100"))
 
 # Expense shock input
 st.subheader("Expense Shocks")
-shock_amount_today = float(st.text_input("Expense shock amount in today's dollars ($)", value="20000"))
+shock_amount_today = float(st.text_input("Expense shock amount in today's dollars ($)", value="10000"))
 
 # Validation for age logic
 if retire_age > death_age:
@@ -83,12 +83,12 @@ if abs(weights_equity + weights_bonds + weights_cash - 1.0) > 0.001:
     weights_cash /= total
 
 # Expected returns and volatilities per asset class
-mean_equity = float(st.text_input("Equity mean annual return (%)", value="7.0")) / 100
-std_equity = float(st.text_input("Equity volatility (%)", value="18.0")) / 100
+mean_equity = float(st.text_input("Equity mean annual return (%)", value="9.0")) / 100
+std_equity = float(st.text_input("Equity volatility (%)", value="15.0")) / 100
 mean_bonds = float(st.text_input("Bond mean annual return (%)", value="3.0")) / 100
 std_bonds = float(st.text_input("Bond volatility (%)", value="6.0")) / 100
-mean_cash = float(st.text_input("Cash mean annual return (%)", value="1.0")) / 100
-std_cash = float(st.text_input("Cash volatility (%)", value="1.0")) / 100
+mean_cash = float(st.text_input("Cash mean annual return (%)", value="2.0")) / 100
+std_cash = float(st.text_input("Cash volatility (%)", value="0.5")) / 100
 
 # Convert equity arithmetic mean/std to lognormal parameters
 mu_eq_ln = np.log(1 + mean_equity) - 0.5 * (std_equity ** 2)
