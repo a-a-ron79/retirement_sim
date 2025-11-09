@@ -16,7 +16,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.ticker import FuncFormatter
 import matplotlib.cm as cm
-
+import matplotlib.colors as mcolors
 
 MAX_SIMS = 20000
 
@@ -158,8 +158,15 @@ def currency_formatter(x, pos):
     return f"${x:,.0f}"
 
 plt.figure(figsize=(10, 6))
-for path in results:
-    plt.plot(path, color='gray', alpha=0.2)
+colors = cm.get_cmap('Spectral', sims)
+for i, path in enumerate(results):
+    plt.plot(path, color=colors(i / sims), alpha=0.3)
+
+# Highlight median line
+median_path = np.median(results, axis=0)
+plt.plot(median_path, color='black', linewidth=2.5, label='Median Path')
+plt.legend()
+
 plt.title("Monte Carlo Retirement Projection — Home to Target Country Transition")
 plt.xlabel("Years from Current Age")
 plt.ylabel("Portfolio Value ($K / $M)")
