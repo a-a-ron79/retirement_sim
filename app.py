@@ -6,6 +6,7 @@ st.markdown('''
 - **Purpose:** This simulator estimates retirement outcomes under uncertainty, using Monte Carlo methods to model investment returns and expenses across a lifetime.
 - **Home vs Target Country:** You can define a *home country* phase and a *target country* phase. During the home country phase (before move age), your income and spending reflect home-country conditions. After the move age, the simulation switches to target-country assumptions.
 - **Income & Savings:** Any annual surplus (income after taxes minus spending) is added to the investment portfolio, increasing the portfolio before compounding.
+- **Lump Sum Events:** You can include a single lump sum to be received in a future year (for example, inheritance or property sale). This amount is **not inflated** and is added directly to your portfolio in the year received.
 - **Taxes:** Two effective tax rates are applied — one while working and one during retirement. Taxes reduce annual income accordingly. Additionally, if investment withdrawals are required during retirement, a 50% portion of your retirement tax rate is applied to inflate withdrawals, approximating partial taxation.
 - **Mid-Year Convention:** Each year’s investment growth is split evenly — half applied before and half after income and spending — to create more realistic annual compounding behavior.
 - **Inflation:** Two separate inflation rates are used — one for your home country (affecting home income and spending) and one for your target country (affecting retirement income and local expenses).
@@ -16,7 +17,6 @@ import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.ticker import FuncFormatter
 import matplotlib.cm as cm
-import matplotlib.colors as mcolors
 
 MAX_SIMS = 20000
 
@@ -53,6 +53,10 @@ retire_tax_rate = float(st.text_input("Effective tax rate during retirement (%)"
 start_ssi_age = int(st.text_input("Age to start receiving retirement income (e.g., SSI)", value="67"))
 ssi_amount_today = float(st.text_input("Annual retirement income in today's dollars ($)", value="26000"))
 include_ssi_taxable = st.checkbox("Include SSI in taxable income?", value=False)
+
+# Lump Sum Event
+receive_lump_age = int(st.text_input("Age when lump sum is received", value="70"))
+lump_amount_today = float(st.text_input("Lump sum amount ($)", value="100000"))
 
 # --- Monte Carlo setup ---
 mean_equity, std_equity = 0.09, 0.15
@@ -102,6 +106,11 @@ for _ in range(sims):
             income += ssi_income
             if include_ssi_taxable:
                 taxable_income += ssi_income
+
+        # Lump sum income event
+        if age == receive_lump_age:
+            lump_sum = lump_amount_today  # no inflation adjustment
+            balance += lump_sum
 
         # Taxes
         taxable_income += income
@@ -162,7 +171,6 @@ colors = cm.get_cmap('Spectral', sims)
 for i, path in enumerate(results):
     plt.plot(path, color=colors(i / sims), alpha=0.3)
 
-# Highlight median line
 median_path = np.median(results, axis=0)
 plt.plot(median_path, color='black', linewidth=2.5, label='Median Path')
 plt.legend()
