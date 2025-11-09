@@ -31,9 +31,9 @@ MAX_SIMS = 20000
 
 # User Inputs
 init = float(st.text_input("Initial portfolio ($)", value="1000000"))
-spend_base = float(st.text_input("Annual spending in target country ($)", value="100000"))
-current_age = int(st.text_input("Current age", value="45"))
-retire_age = int(st.text_input("Retirement age", value="55"))
+spend_base = float(st.text_input("Annual spending in target country ($)", value="30000"))
+current_age = int(st.text_input("Current age", value="40"))
+retire_age = int(st.text_input("Retirement age", value="65"))
 death_age = int(st.text_input("Age at death", value="100"))
 
 gross_income = float(st.text_input("Annual earned income before retirement ($)", value="0"))
