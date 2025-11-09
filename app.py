@@ -27,7 +27,6 @@ import matplotlib.pyplot as plt
 from matplotlib.ticker import FuncFormatter
 import matplotlib.cm as cm
 
-
 MAX_SIMS = 20000
 
 # User Inputs
@@ -37,6 +36,8 @@ current_age = int(st.text_input("Current age", value="45"))
 retire_age = int(st.text_input("Retirement age", value="55"))
 death_age = int(st.text_input("Age at death", value="100"))
 
+gross_income = float(st.text_input("Annual earned income before retirement ($)", value="0"))
+
 # Expense shock input
 st.subheader("Expense Shocks")
 shock_amount_today = float(st.text_input("Expense shock amount in today's dollars ($)", value="10000"))
@@ -45,11 +46,6 @@ shock_amount_today = float(st.text_input("Expense shock amount in today's dollar
 if retire_age > death_age:
     st.warning("⚠️ Retirement age cannot exceed age at death. Adjusting retirement age to match death age.")
     retire_age = death_age
-
-# If already retired (current_age >= retire_age), disable work income logic
-already_retired = current_age >= retire_age
-if already_retired:
-    st.info("This scenario models someone already in retirement. Earned income will not be applied.")
 
 # Inflation parameters
 home_inflation_rate = float(st.text_input("Home country annual inflation rate (%)", value="2.0"))
@@ -123,12 +119,6 @@ st.caption(f"Running {sims:,} simulations (cap = {MAX_SIMS:,}).")
 
 threshold = float(st.text_input("Success threshold ($)", value="0"))
 
-# Work income parameters
-earn_income = st.checkbox("Earn income before retirement?") and not already_retired
-gross_income = 0.0
-if earn_income:
-    gross_income = float(st.text_input("Gross annual pre-tax income ($)", value="50000"))
-
 # Derived years
 total_years = death_age - current_age
 
@@ -148,15 +138,14 @@ for _ in range(sims):
 
         # Determine spending and income by life stage
         spend = spend_base * ((1 + target_inflation_decimal) ** year)
-        
+
         # Apply expense shock every 10 years
         if (age - current_age) % 10 == 0 and age != current_age:
             shock_expense = shock_amount_today * ((1 + target_inflation_decimal) ** (age - current_age))
             spend += shock_expense
 
         income = 0
-
-        if earn_income and age < retire_age:
+        if gross_income > 0 and age < retire_age:
             income += gross_income
 
         # Add SSI/retirement income after start_ssi_age, adjusted for home inflation
