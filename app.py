@@ -1,5 +1,7 @@
 import streamlit as st
 
+st.title("Monte Carlo Retirement Simulator — Geographic Arbitrage Edition (Mid-Year Convention)")
+
 st.markdown('''
 ### How This Model Works
 - **Purpose:** This simulator estimates retirement outcomes under uncertainty, using Monte Carlo methods to model investment returns and expenses across a lifetime.
@@ -16,7 +18,6 @@ import matplotlib.pyplot as plt
 from matplotlib.ticker import FuncFormatter
 import matplotlib.cm as cm
 
-st.title("Monte Carlo Retirement Simulator — Geographic Arbitrage Edition (Mid-Year Convention)")
 
 MAX_SIMS = 20000
 
