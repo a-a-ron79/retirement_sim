@@ -1,10 +1,10 @@
 import streamlit as st
-
 st.markdown('''
 ### How This Model Works
 - **Income:** Before retirement, earned income reduces how much must be withdrawn from investments. If income exceeds expenses, the surplus stays invested. Once retired, this income stops unless Social Security or another retirement income is selected.
 - **Taxes:** Two effective tax rates are applied—one while working and one during retirement. Taxes are subtracted each year based on taxable income (earned income and, if selected, taxable SSI). This keeps the simulation simple but realistic.
 - **Expenses:** Annual spending is entered in today's dollars and grows each year according to the **target country inflation rate**.
+- **Expense Shocks:** Every 10 years from your current age, a major expense (entered in today's dollars) occurs and is adjusted for the **target country inflation rate**.
 - **Social Security (SSI):** Begins at the age you specify and is adjusted annually using the **home country inflation rate**. SSI is applied toward expenses first; any remaining surplus is reinvested into the portfolio.
 - **Lump Sum Events:** You can enter a one-time lump sum (for example, inheritance, property sale, or pension payout) received at a specific age. The amount is added to the portfolio balance in that year.
 - **Investments:** Portfolio returns are simulated across equities, bonds, and cash:
@@ -13,14 +13,13 @@ st.markdown('''
   - **Cash** uses *normal returns clipped at 0%*, so cash never loses nominal value but still fluctuates slightly.
   - All three asset classes are modeled with realistic correlations using a Cholesky decomposition.
 - **Inflation:** Two separate inflation rates are used — one for your home country (to adjust SSI or similar income) and one for your target country (to adjust living expenses).
-- **Projection:** Each simulation represents a potential future path of your portfolio value from your current age through your expected age at death, considering income, spending, lump sums, and returns.
+- **Projection:** Each simulation represents a potential future path of your portfolio value from your current age through your expected age at death, considering income, spending, lump sums, taxes, shocks, and returns.
 - **Results:** The simulator outputs key metrics:
   - Median, 10th percentile, and 90th percentile ending portfolio values.
   - Minimum and maximum ending values observed across simulations.
-  - Success rate — the percentage of runs where your final portfolio exceeds your target threshold.**
+  - Success rate — the percentage of runs where your final portfolio exceeds your target threshold.
 ''')
 
-import streamlit as st
 import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.ticker import FuncFormatter
@@ -32,20 +31,14 @@ MAX_SIMS = 20000
 
 # User Inputs
 init = float(st.text_input("Initial portfolio ($)", value="1000000"))
-spend_base = float(st.text_input("Annual spending in target country ($)", value="50000"))
-current_age = int(st.text_input("Current age", value="45"))
+spend_base = float(st.text_input("Annual spending in target country ($)", value="60000"))
+current_age = int(st.text_input("Current age", value="68"))
 retire_age = int(st.text_input("Retirement age", value="65"))
-death_age = int(st.text_input("Age at death", value="100"))
+death_age = int(st.text_input("Age at death", value="90"))
 
-# Work income parameters moved here
-earn_income = st.checkbox("Earn income before retirement?")
-gross_income = 0.0
-if earn_income:
-    gross_income = float(st.text_input("Gross annual pre-tax income ($)", value="50000"))
-
-# Tax rates
-work_tax_rate = float(st.text_input("Effective tax rate while working (%)", value="20.0")) / 100
-retire_tax_rate = float(st.text_input("Effective tax rate during retirement (%)", value="10.0")) / 100
+# Expense shock input
+st.subheader("Expense Shocks")
+shock_amount_today = float(st.text_input("Expense shock amount in today's dollars ($)", value="20000"))
 
 # Validation for age logic
 if retire_age > death_age:
@@ -89,16 +82,16 @@ if abs(weights_equity + weights_bonds + weights_cash - 1.0) > 0.001:
     weights_cash /= total
 
 # Expected returns and volatilities per asset class
-mean_equity = float(st.text_input("Equity mean annual return (%)", value="10.0")) / 100
-std_equity = float(st.text_input("Equity volatility (%)", value="15.0")) / 100
+mean_equity = float(st.text_input("Equity mean annual return (%)", value="7.0")) / 100
+std_equity = float(st.text_input("Equity volatility (%)", value="18.0")) / 100
 mean_bonds = float(st.text_input("Bond mean annual return (%)", value="3.0")) / 100
 std_bonds = float(st.text_input("Bond volatility (%)", value="6.0")) / 100
-mean_cash = float(st.text_input("Cash mean annual return (%)", value="2.0")) / 100
+mean_cash = float(st.text_input("Cash mean annual return (%)", value="1.0")) / 100
 std_cash = float(st.text_input("Cash volatility (%)", value="1.0")) / 100
 
-# Corrected conversion from arithmetic to lognormal parameters
-sigma_eq_ln = np.sqrt(np.log(1 + (std_equity**2) / ((1 + mean_equity)**2)))
-mu_eq_ln = np.log(1 + mean_equity) - 0.5 * sigma_eq_ln**2
+# Convert equity arithmetic mean/std to lognormal parameters
+mu_eq_ln = np.log(1 + mean_equity) - 0.5 * (std_equity ** 2)
+sigma_eq_ln = np.sqrt(np.log(1 + (std_equity ** 2)))
 
 # Correlation matrix (approximate typical assumptions)
 corr = np.array([[1.0, 0.2, 0.0], [0.2, 1.0, 0.1], [0.0, 0.1, 1.0]])
@@ -129,6 +122,12 @@ st.caption(f"Running {sims:,} simulations (cap = {MAX_SIMS:,}).")
 
 threshold = float(st.text_input("Success threshold ($)", value="0"))
 
+# Work income parameters
+earn_income = st.checkbox("Earn income before retirement?") and not already_retired
+gross_income = 0.0
+if earn_income:
+    gross_income = float(st.text_input("Gross annual pre-tax income ($)", value="50000"))
+
 # Derived years
 total_years = death_age - current_age
 
@@ -148,6 +147,12 @@ for _ in range(sims):
 
         # Determine spending and income by life stage
         spend = spend_base * ((1 + target_inflation_decimal) ** year)
+        
+        # Apply expense shock every 10 years
+        if (age - current_age) % 10 == 0 and age != current_age:
+            shock_expense = shock_amount_today * ((1 + target_inflation_decimal) ** (age - current_age))
+            spend += shock_expense
+
         income = 0
 
         if earn_income and age < retire_age:
@@ -162,16 +167,6 @@ for _ in range(sims):
         if receive_lump_sum and age == lump_sum_age:
             balance += lump_sum_amount
 
-        # Determine tax rate and taxable income
-        effective_tax_rate = work_tax_rate if age < retire_age else retire_tax_rate
-        taxable_income = 0
-        if age < retire_age and earn_income:
-            taxable_income += gross_income
-        if include_ssi_taxable and age >= start_ssi_age:
-            taxable_income += ssi_income
-
-        tax = taxable_income * effective_tax_rate
-
         # Simulate correlated standard normal shocks
         rand = np.random.normal(0, 1, 3)
         correlated = chol @ rand
@@ -184,8 +179,8 @@ for _ in range(sims):
         # Weighted portfolio return
         portfolio_growth = weights_equity * eq_ret + weights_bonds * bd_ret + weights_cash * cs_ret
 
-        # Update portfolio with taxes applied
-        balance = (balance + income - spend - tax) * (1 + portfolio_growth)
+        # Update portfolio
+        balance = (balance + income - spend) * (1 + portfolio_growth)
         path.append(balance)
 
     results.append(path)
@@ -231,14 +226,3 @@ st.write(f"**90th Percentile:** ${p90:,.0f}")
 st.write(f"**Minimum Portfolio at Death:** ${min_final:,.0f}")
 st.write(f"**Maximum Portfolio at Death:** ${max_final:,.0f}")
 st.write(f"**Success Rate (Final > ${threshold:,.0f}):** {success_rate:.1f}%")
-
-
-
-
-
-
-
-
-
-
-
