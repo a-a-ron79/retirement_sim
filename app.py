@@ -1,5 +1,4 @@
 import streamlit as st
-
 st.title("Monte Carlo Retirement Simulator — Geographic Arbitrage Edition (Mid-Year Convention)")
 
 st.markdown('''
@@ -29,6 +28,11 @@ current_age = int(st.text_input("Current age", value="40"))
 move_age = int(st.text_input("Age when moving to target country", value="55"))
 retire_age = int(st.text_input("Retirement age", value="65"))
 death_age = int(st.text_input("Age at death", value="100"))
+
+# Guard clause for age logic
+if current_age >= move_age:
+    st.info('Current age is beyond or equal to move age — simulation will start directly in the target country phase.')
+    move_age = current_age
 
 # Home country income and spending
 home_income = float(st.text_input("Annual earned income in home country ($)", value="80000"))
