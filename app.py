@@ -53,7 +53,17 @@ std_bonds = float(st.text_input("Volatility for bonds (%)", value="6.0")) / 100
 mean_cash = float(st.text_input("Mean annual return for cash (%)", value="2.0")) / 100
 std_cash = float(st.text_input("Volatility for cash (%)", value="0.5")) / 100
 
-weights_equity, weights_bonds, weights_cash = 0.6, 0.3, 0.1
+# Portfolio Allocation Inputs
+weights_equity = float(st.text_input("Equity allocation (%)", value="60")) / 100
+weights_bonds = float(st.text_input("Bond allocation (%)", value="30")) / 100
+weights_cash = float(st.text_input("Cash allocation (%)", value="10")) / 100
+
+# Normalize if needed
+weight_sum = weights_equity + weights_bonds + weights_cash
+if weight_sum != 1:
+    weights_equity /= weight_sum
+    weights_bonds /= weight_sum
+    weights_cash /= weight_sum
 
 # Tax rates
 work_tax_rate = float(st.text_input("Effective tax rate while working (%)", value="20.0")) / 100
@@ -194,3 +204,4 @@ st.write(f"**90th Percentile:** ${p90:,.0f}")
 st.write(f"**Minimum Portfolio at Death:** ${min_final:,.0f}")
 st.write(f"**Maximum Portfolio at Death:** ${max_final:,.0f}")
 st.write(f"**Success Rate (Final > 0):** {success_rate:.1f}%")
+
