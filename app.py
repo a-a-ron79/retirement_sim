@@ -37,21 +37,21 @@ if current_age >= move_age:
 # Home country income and spending
 home_income = float(st.text_input("Annual earned income in home country ($)", value="80000"))
 home_spend_base = float(st.text_input("Annual spending in home country ($)", value="60000"))
-home_inflation_rate = float(st.text_input("Home country annual inflation rate (%)", value="2.0"))
+home_inflation_rate = float(st.text_input("Home country annual inflation rate (%)", value="2.5"))
 
 # Target country income and spending
 spend_base = float(st.text_input("Annual spending in target country ($)", value="30000"))
 target_inflation_rate = float(st.text_input("Target country annual inflation rate (%)", value="4.0"))
 
-gross_income = float(st.text_input("Annual earned income before retirement in target country ($)", value="0"))
+gross_income = float(st.text_input("Annual earned income before retirement in target country ($)", value="12000"))
 
 # Investment Return Assumptions
-mean_equity = float(st.text_input("Mean annual return for equities (%)", value="9.0")) / 100
-std_equity = float(st.text_input("Volatility for equities (%)", value="15.0")) / 100
-mean_bonds = float(st.text_input("Mean annual return for bonds (%)", value="3.0")) / 100
+mean_equity = float(st.text_input("Mean annual return for equities (%)", value="8.5")) / 100
+std_equity = float(st.text_input("Volatility for equities (%)", value="17.0")) / 100
+mean_bonds = float(st.text_input("Mean annual return for bonds (%)", value="5.0")) / 100
 std_bonds = float(st.text_input("Volatility for bonds (%)", value="6.0")) / 100
-mean_cash = float(st.text_input("Mean annual return for cash (%)", value="2.0")) / 100
-std_cash = float(st.text_input("Volatility for cash (%)", value="0.5")) / 100
+mean_cash = float(st.text_input("Mean annual return for cash (%)", value="2.75")) / 100
+std_cash = float(st.text_input("Volatility for cash (%)", value="1.5")) / 100
 
 # Portfolio Allocation Inputs
 weights_equity = float(st.text_input("Equity allocation (%)", value="60")) / 100
@@ -67,7 +67,7 @@ if weight_sum != 1:
 
 # Tax rates
 work_tax_rate = float(st.text_input("Effective tax rate while working (%)", value="20.0")) / 100
-retire_tax_rate = float(st.text_input("Effective tax rate during retirement (%)", value="10.0")) / 100
+retire_tax_rate = float(st.text_input("Effective tax rate during retirement (%)", value="15.0")) / 100
 
 # SSI / Pension
 start_ssi_age = int(st.text_input("Age to start receiving retirement income (e.g., SSI)", value="67"))
