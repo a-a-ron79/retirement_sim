@@ -37,25 +37,25 @@ if current_age >= move_age:
 # Home country income and spending
 home_income = float(st.text_input("Annual earned income in home country ($)", value="80000"))
 home_spend_base = float(st.text_input("Annual spending in home country ($)", value="60000"))
-home_inflation_rate = float(st.text_input("Home country annual inflation rate (%)", value="2.5"))
+home_inflation_rate = float(st.text_input("Home country annual inflation rate (%)", value="2.0"))
 
 # Target country income and spending
 spend_base = float(st.text_input("Annual spending in target country ($)", value="30000"))
 target_inflation_rate = float(st.text_input("Target country annual inflation rate (%)", value="4.0"))
 
-gross_income = float(st.text_input("Annual earned income before retirement in target country ($)", value="12000"))
+gross_income = float(st.text_input("Annual earned income before retirement in target country ($)", value="0"))
 
 # Investment Return Assumptions
 mean_equity = float(st.text_input("Mean annual return for equities (%)", value="8.5")) / 100
 std_equity = float(st.text_input("Volatility for equities (%)", value="17.0")) / 100
 mean_bonds = float(st.text_input("Mean annual return for bonds (%)", value="5.0")) / 100
 std_bonds = float(st.text_input("Volatility for bonds (%)", value="6.0")) / 100
-mean_cash = float(st.text_input("Mean annual return for cash (%)", value="2.75")) / 100
+mean_cash = float(st.text_input("Mean annual return for cash (%)", value="2.5")) / 100
 std_cash = float(st.text_input("Volatility for cash (%)", value="1.5")) / 100
 
 # Portfolio Allocation Inputs
-weights_equity = float(st.text_input("Equity allocation (%)", value="60")) / 100
-weights_bonds = float(st.text_input("Bond allocation (%)", value="30")) / 100
+weights_equity = float(st.text_input("Equity allocation (%)", value="65")) / 100
+weights_bonds = float(st.text_input("Bond allocation (%)", value="25")) / 100
 weights_cash = float(st.text_input("Cash allocation (%)", value="10")) / 100
 
 # Normalize if needed
@@ -168,7 +168,7 @@ results = np.array(results)
 
 # --- Results ---
 median_final = np.median(final_balances)
-p10, p90 = np.percentile(final_balances, [10, 90])
+p10, p20, p80, p90 = np.percentile(final_balances, [10, 20, 80, 90])
 min_final, max_final = np.min(final_balances), np.max(final_balances)
 success_rate = np.mean(np.array(final_balances) > 0) * 100
 
@@ -200,8 +200,9 @@ st.pyplot(plt)
 st.subheader("Simulation Results Summary")
 st.write(f"**Median Portfolio at Death:** ${median_final:,.0f}")
 st.write(f"**10th Percentile:** ${p10:,.0f}")
+st.write(f"**20th Percentile:** ${p20:,.0f}")
+st.write(f"**80th Percentile:** ${p80:,.0f}")
 st.write(f"**90th Percentile:** ${p90:,.0f}")
 st.write(f"**Minimum Portfolio at Death:** ${min_final:,.0f}")
 st.write(f"**Maximum Portfolio at Death:** ${max_final:,.0f}")
 st.write(f"**Success Rate (Final > 0):** {success_rate:.1f}%")
-
